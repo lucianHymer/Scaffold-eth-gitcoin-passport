@@ -29,7 +29,7 @@ import externalContracts from "./contracts/external_contracts";
 // contracts
 import deployedContracts from "./contracts/hardhat_contracts.json";
 import { Transactor, Web3ModalSetup } from "./helpers";
-import { ExampleUI, Hints, SigninPassport } from "./views";
+import { ExampleUI, Hints, SigninPassport, IssueStamp } from "./views";
 import { useStaticJsonRPC } from "./hooks";
 
 const { ethers } = require("ethers");
@@ -260,6 +260,9 @@ function App(props) {
         <Menu.Item key="/">
           <Link to="/">Sign in with Passport</Link>
         </Menu.Item>
+        <Menu.Item key="/stamp">
+          <Link to="/stamp">Issue Stamp</Link>
+        </Menu.Item>
         <Menu.Item key="/debug">
           <Link to="/debug">Debug Contracts</Link>
         </Menu.Item>
@@ -274,6 +277,20 @@ function App(props) {
       <Switch>
         <Route exact path="/">
           <SigninPassport
+            address={address}
+            userSigner={userSigner}
+            mainnetProvider={mainnetProvider}
+            localProvider={localProvider}
+            yourLocalBalance={yourLocalBalance}
+            price={price}
+            tx={tx}
+            writeContracts={writeContracts}
+            readContracts={readContracts}
+            purpose={purpose}
+          />
+        </Route>
+        <Route exact path="/stamp">
+          <IssueStamp
             address={address}
             userSigner={userSigner}
             mainnetProvider={mainnetProvider}
