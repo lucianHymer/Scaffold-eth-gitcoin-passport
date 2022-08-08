@@ -167,6 +167,7 @@ export default function usePassport(address) {
   useEffect(() => {
     const scorePassport = async () => {
       if (doScore && ScorerClass) {
+        if (!stamps) return console.log("Must enable or verify before scoring");
         const scorer = new ScorerClass(
           stamps.map(stamp => ({
             provider: stamp.provider,

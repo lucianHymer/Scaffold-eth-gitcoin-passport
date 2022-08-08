@@ -6,6 +6,9 @@ module.exports = {
       plugins: [require("tailwindcss"), require("autoprefixer")],
     },
   },
+  babel: {
+    plugins: ["@babel/plugin-proposal-nullish-coalescing-operator", "@babel/plugin-proposal-optional-chaining"],
+  },
   webpack: {
     configure: webpackConfig => {
       const wasmExtensionRegExp = /\.wasm$/
@@ -26,6 +29,12 @@ module.exports = {
       }
 
       addBeforeLoader(webpackConfig, loaderByName("file-loader"), wasmLoader)
+
+      webpackConfig.module.rules.push({
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: "javascript/auto",
+      })
 
       return webpackConfig
     },
