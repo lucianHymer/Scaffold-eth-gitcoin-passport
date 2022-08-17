@@ -92,6 +92,7 @@
   },
   "scripts": {
     "build": "craco build",
+    "build:gh-pages": "craco build && rm -rf ../../docs && mv build ../../docs",
     "start": "craco start",
     "test": "craco test",
     "eject": "react-scripts eject",
