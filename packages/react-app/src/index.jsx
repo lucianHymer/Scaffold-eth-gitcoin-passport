@@ -1,10 +1,12 @@
 import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
 import React from "react";
 import { ThemeSwitcherProvider } from "react-css-theme-switcher";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, HashRouter } from "react-router-dom";
 import ReactDOM from "react-dom";
 import App from "./App";
 import "./index.css";
+
+const Router = process.env.PUBLIC_URL === "/Scaffold-eth-gitcoin-passport" ? HashRouter : BrowserRouter;
 
 const themes = {
   dark: `${process.env.PUBLIC_URL}/dark-theme.css`,
@@ -23,9 +25,9 @@ const client = new ApolloClient({
 ReactDOM.render(
   <ApolloProvider client={client}>
     <ThemeSwitcherProvider themeMap={themes} defaultTheme={prevTheme || "light"}>
-      <BrowserRouter>
+      <Router>
         <App subgraphUri={subgraphUri} />
-      </BrowserRouter>
+      </Router>
     </ThemeSwitcherProvider>
   </ApolloProvider>,
   document.getElementById("root"),
