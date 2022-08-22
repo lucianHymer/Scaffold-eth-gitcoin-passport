@@ -13,47 +13,13 @@ import { PassportReader } from "@gitcoinco/passport-sdk-reader";
 
 // TODO
 // 1. Direct to passport creation if none exist
-// 2. Add stamp creation (somewhat on hold)
+// 2. on hold - Add stamp creation
 // 3. x - Move to a top-level context and let this be sourced throughout app
-// 4. Move weight and threshold setting to contract
-// 5. Set weight and threshold in contract from the frontend
+// 4. x - Make weight and threshold dynamic
+// 5. x - Set weight and threshold from the frontend
 // 6. Simplify the form code so that it reads more like a spec of usePassport
 
 const Passport = React.createContext({});
-
-class ScoreComputer {
-  constructor(providerWeightMap, defaultWeight, approvalThreshold) {
-    this.providerWeightMap = providerWeightMap;
-    this.defaultWeight = defaultWeight;
-    this.approvalThreshold = approvalThreshold;
-  }
-
-  async compute(address, stamps) {
-    const scorer = await this.loadScorer(stamps);
-
-    const score = await scorer.getScore(address);
-
-    const approved = score >= this.approvalThreshold;
-
-    return { score, approved };
-  }
-
-  async loadScorer(stamps) {
-    // Dynamically load @gitcoinco/passport-sdk-scorer
-    // Required for WASM
-    const PassportScorer = (await import("@gitcoinco/passport-sdk-scorer")).PassportScorer;
-    const stampsArg = this.formatStampsArg(stamps);
-    return new PassportScorer(stampsArg);
-  }
-
-  formatStampsArg(stamps) {
-    return stamps.map(stamp => ({
-      provider: stamp.provider,
-      issuer: stamp.credential.issuer,
-      score: this.providerWeightMap[stamp.provider] || this.defaultWeight,
-    }));
-  }
-}
 
 // This object and set of functions allow
 // for consistent state management
@@ -65,6 +31,7 @@ const defaults = {
   scored: false,
   approved: false,
   error: null,
+  missing: false,
 };
 
 function resetPassport() {
@@ -72,12 +39,13 @@ function resetPassport() {
 }
 
 function setPassport(data) {
-  return { ...defaults, ...data };
+  return { ...defaults, ...data, error: null };
 }
 
-function errorPassport(data) {
-  console.log("usePassport error:", data);
-  return { ...defaults, error: data };
+function errorPassport(message, extraData) {
+  console.log("usePassport error:", message, extraData);
+  if (extraData) console.log(extraData);
+  return { ...defaults, ...(extraData || {}), error: message };
 }
 
 // This is the central reducer for passport state
@@ -91,6 +59,8 @@ function updatePassport(state, action) {
       return setPassport({ ...state, ...data, pending: null, active: true });
     case "pending":
       return setPassport({ ...state, pending: data });
+    case "missing":
+      return errorPassport(data, { missing: true });
     case "error":
       return errorPassport(data);
     default:
@@ -106,7 +76,7 @@ function usePassportManager() {
   const [passport, dispatch] = useReducer(updatePassport, undefined, resetPassport);
 
   const reportMissingPassport = () =>
-    dispatch({ type: "error", data: "Unable to retrieve passport, you may need to create one" });
+    dispatch({ type: "missing", data: "Unable to retrieve passport, you may need to create one" });
 
   const read = useCallback(async address => {
     const reader = new PassportReader("https://ceramic.passport-iam.gitcoin.co", "1");
@@ -118,69 +88,65 @@ function usePassportManager() {
     return true;
   }, []);
 
-  const getVerificationData = useCallback(async address => {
+  // These 2 modules must be dynamically loaded
+  // Required for WASM
+  const loadVerifier = useCallback(async () => {
     const PassportVerifier = (await import("@gitcoinco/passport-sdk-verifier")).PassportVerifier;
-    const verifier = new PassportVerifier("https://ceramic.passport-iam.gitcoin.co", "1");
-
-    const data = await verifier.verifyPassport(address);
-    console.log("verify data", data);
-
-    return data;
+    return new PassportVerifier("https://ceramic.passport-iam.gitcoin.co", "1");
   }, []);
 
-  const getFailedStampsFromData = data => data.stamps.filter(stamp => !stamp.verified);
-
-  const reportFailedStamps = useCallback(failedStamps => {
-    dispatch({
-      type: "error",
-      data: "Failed to verify stamp(s): " + JSON.stringify(failedStamps),
-    });
+  const loadScorer = useCallback(async stamps => {
+    const PassportScorer = (await import("@gitcoinco/passport-sdk-scorer")).PassportScorer;
+    return new PassportScorer(stamps);
   }, []);
 
   const verify = useCallback(
     async address => {
-      const data = await getVerificationData(address);
+      const verifier = await loadVerifier();
+      const data = await verifier.verifyPassport(address);
+      console.log("verify data", data);
+
       if (!data) return reportMissingPassport();
 
-      const failedStamps = getFailedStampsFromData(data);
+      const failedStamps = data.stamps.filter(stamp => !stamp.verified);
 
-      if (failedStamps.length) return reportFailedStamps(failedStamps);
+      if (failedStamps.length)
+        return dispatch({
+          type: "error",
+          data: "Failed to verify stamp(s): " + JSON.stringify(failedStamps),
+        });
       else dispatch({ type: "activate", data: { verified: "true", ...data } });
     },
-    [getVerificationData, reportFailedStamps],
+    [loadVerifier],
   );
 
   const score = useCallback(
-    async (address, defaultWeight, approvalThreshold, providerWeightMap) => {
-      if (!defaultWeight || !approvalThreshold)
+    async (address, acceptedStamps, approvalThreshold) => {
+      if (!approvalThreshold || !(acceptedStamps && acceptedStamps.length))
         return dispatch({
           type: "error",
-          data: "Passport scoring requires defaultWeight and approvalThreshold, and optionally a providerWeightMap of {providerName => weight}",
+          data: "Passport scoring requires non-zero approvalThreshold and an array of stamps in format [{provider, issuer, score}]",
         });
 
-      const data = await getVerificationData(address);
-      if (!data) return reportMissingPassport();
+      const scorer = await loadScorer(acceptedStamps);
+      const score = await scorer.getScore(address);
 
-      const failedStamps = getFailedStampsFromData(data);
+      const approved = score >= approvalThreshold;
 
-      if (failedStamps.length) return reportFailedStamps(failedStamps);
-
-      const scoreComputer = new ScoreComputer(providerWeightMap, defaultWeight, approvalThreshold);
-      const { score, approved } = await scoreComputer.compute(address, data.stamps);
       dispatch({
         type: "activate",
-        data: { ...data, verified: true, scored: true, score, approved },
+        data: { verified: true, scored: true, score, approved },
       });
 
       return approved;
     },
-    [getVerificationData, reportFailedStamps],
+    [loadScorer],
   );
 
   const setPendingStatus = useCallback(status => dispatch({ type: "pending", data: status }), []);
 
   const activate = useCallback(
-    async ({ address, mode, providerWeightMap, defaultWeight, approvalThreshold }) => {
+    async ({ address, mode, acceptedStamps, approvalThreshold }) => {
       if (!address) return dispatch({ type: "error", data: "Address required to interact with a passport" });
 
       let approved = false;
@@ -196,7 +162,7 @@ function usePassportManager() {
         case "score":
         default:
           setPendingStatus("score");
-          approved = await score(address, defaultWeight, approvalThreshold, providerWeightMap);
+          approved = await score(address, acceptedStamps, approvalThreshold);
           break;
       }
 
