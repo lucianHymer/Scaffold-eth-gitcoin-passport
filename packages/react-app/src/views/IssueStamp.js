@@ -4,8 +4,6 @@ import { EthereumAuthProvider } from "@3id/connect";
 
 import { useViewerConnection } from "@self.id/framework";
 
-import { PassportWriter } from "@gitcoinco/passport-sdk-writer";
-
 // TODO alert if not connected using metamask
 
 export default function IssueStamp({ address, provider }) {
@@ -21,24 +19,29 @@ export default function IssueStamp({ address, provider }) {
     [address, connectCeramic, viewerConnection.status],
   );
 
-  useEffect(() => {
-    switch (viewerConnection.status) {
-      case "idle": {
-        // not connected yet
-        break;
-      }
-      case "connected": {
-        new PassportWriter(viewerConnection.selfID.did);
-        break;
-      }
-      case "failed": {
-        // user refused to connect or authenticate to ceramic
-        break;
-      }
-      default:
-        break;
-    }
-  }, [viewerConnection.status, viewerConnection.selfID.did]);
+  useEffect(
+    () =>
+      (async () => {
+        switch (viewerConnection.status) {
+          case "idle": {
+            // not connected yet
+            break;
+          }
+          case "connected": {
+            const PassportWriter = (await import("@gitcoinco/passport-sdk-writer")).PassportWriter;
+            new PassportWriter(viewerConnection.selfID.did);
+            break;
+          }
+          case "failed": {
+            // user refused to connect or authenticate to ceramic
+            break;
+          }
+          default:
+            break;
+        }
+      })(),
+    [viewerConnection.status, viewerConnection.selfID.did],
+  );
 
   return (
     <div className="p-10">
