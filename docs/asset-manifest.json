@@ -4,8 +4,8 @@
     "a99198d01cd3259d4609.module.wasm": "/Scaffold-eth-gitcoin-passport/a99198d01cd3259d4609.module.wasm",
     "static/js/0.71752245.chunk.js.map": "/Scaffold-eth-gitcoin-passport/static/js/0.71752245.chunk.js.map",
     "main.css": "/Scaffold-eth-gitcoin-passport/static/css/main.7db57c0a.chunk.css",
-    "main.js": "/Scaffold-eth-gitcoin-passport/static/js/main.1a497b4d.chunk.js",
-    "main.js.map": "/Scaffold-eth-gitcoin-passport/static/js/main.1a497b4d.chunk.js.map",
+    "main.js": "/Scaffold-eth-gitcoin-passport/static/js/main.da8448ea.chunk.js",
+    "main.js.map": "/Scaffold-eth-gitcoin-passport/static/js/main.da8448ea.chunk.js.map",
     "runtime-main.js": "/Scaffold-eth-gitcoin-passport/static/js/runtime-main.b38e495e.js",
     "runtime-main.js.map": "/Scaffold-eth-gitcoin-passport/static/js/runtime-main.b38e495e.js.map",
     "static/css/3.f9a5484c.chunk.css": "/Scaffold-eth-gitcoin-passport/static/css/3.f9a5484c.chunk.css",
@@ -24,6 +24,6 @@
     "static/css/3.f9a5484c.chunk.css",
     "static/js/3.9348dfd4.chunk.js",
     "static/css/main.7db57c0a.chunk.css",
-    "static/js/main.1a497b4d.chunk.js"
+    "static/js/main.da8448ea.chunk.js"
   ]
 }
